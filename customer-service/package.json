@@ -1,5 +1,5 @@
 {
-  "name": "api-gateway",
+  "name": "customer-service",
   "version": "1.0.0",
   "description": "",
   "main": "index.js",
@@ -12,13 +12,11 @@
   "license": "ISC",
   "packageManager": "pnpm@10.33.0",
   "dependencies": {
-    "cors": "^2.8.6",
     "dotenv": "^17.4.2",
     "express": "^5.2.1",
-    "express-rate-limit": "^8.5.0",
     "helmet": "^8.1.0",
-    "http-proxy-middleware": "^4.0.0",
-    "jsonwebtoken": "^9.0.3",
+    "joi": "^18.2.1",
+    "mongoose": "^9.6.1",
     "morgan": "^1.10.1"
   },
   "devDependencies": {
