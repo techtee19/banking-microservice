@@ -33,6 +33,6 @@ const transactionSchema = new mongoose.Schema(
 transactionSchema.index({ userId: 1, createdAt: -1 });
 transactionSchema.index({ sourceAccount: 1 });
 transactionSchema.index({ destinationAccount: 1 });
-transactionSchema.index({ transactionRef: 1 });
+// transactionSchema.index({ transactionRef: 1 });
 
 module.exports = mongoose.model("Transaction", transactionSchema);

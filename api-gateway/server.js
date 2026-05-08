@@ -1,17 +1,17 @@
+require("dotenv").config();
+
 const express = require("express");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const cors = require("cors");
 const routes = require("./src/routes/index");
 
-require("dotenv").config();
-
 const app = express();
 
 // Security & Middleware
 app.use(helmet());
 app.use(morgan("dev"));
-app.use(express.json());
+// app.use(express.json());
 
 // CORS — only allow specified origins
 app.use(

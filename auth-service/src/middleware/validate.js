@@ -1,7 +1,5 @@
 const Joi = require("joi");
-const { errorResponse } = require("../utils/response.utils");
 
-// Validation schemas
 const schemas = {
   register: Joi.object({
     firstName: Joi.string().min(2).max(50).required(),
@@ -23,16 +21,21 @@ const schemas = {
   }),
 };
 
-// Middleware factory
-const validate = (schemaName) => (req, res, next) => {
-  const { error } = schemas[schemaName].validate(req.body, {
-    abortEarly: false,
-  });
-  if (error) {
-    const errors = error.details.map((d) => d.message);
-    return errorResponse(res, 400, "Validation failed", errors);
-  }
-  next();
+const validate = (schemaName) => {
+  return (req, res, next) => {
+    console.log("[VALIDATE] body:", req.body); // ← add this temporarily
+    const schema = schemas[schemaName];
+    if (!schema) return next();
+
+    const { error } = schema.validate(req.body, { abortEarly: false });
+    if (error) {
+      const errors = error.details.map((d) => d.message);
+      return res
+        .status(400)
+        .json({ success: false, message: "Validation failed", errors });
+    }
+    return next();
+  };
 };
 
 module.exports = validate;

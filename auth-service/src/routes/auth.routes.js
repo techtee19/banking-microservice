@@ -13,6 +13,6 @@ router.post(
 router.post("/login", authLimiter, validate("login"), authController.login);
 router.post("/refresh", authController.refreshToken);
 router.post("/logout", authController.logout);
-router.get("/me", authController.getMe); // Called internally by API Gateway
+router.get("/me", authController.getMe);
 
 module.exports = router;

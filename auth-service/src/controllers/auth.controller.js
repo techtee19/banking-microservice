@@ -7,31 +7,46 @@ const {
 } = require("../utils/jwt.utils");
 const { successResponse, errorResponse } = require("../utils/response.utils");
 
-// Helper: send refresh token as HttpOnly cookie
 const setRefreshCookie = (res, token) => {
   res.cookie("refreshToken", token, {
-    httpOnly: true, // JS cannot access this cookie
+    httpOnly: true,
     secure: process.env.NODE_ENV === "production",
     sameSite: "strict",
-    maxAge: 7 * 24 * 60 * 60 * 1000, // 7 days
+    maxAge: 7 * 24 * 60 * 60 * 1000,
   });
 };
 
-// ─── REGISTER ───────────────────────────────────────────────
+// ─── REGISTER ────────────────────────────────────────────────
 exports.register = async (req, res) => {
   try {
+    console.log("[REGISTER] body received:", req.body);
+
     const { firstName, lastName, email, password } = req.body;
+
+    if (!firstName || !lastName || !email || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "All fields are required" });
+    }
 
     const existingUser = await User.findOne({ email });
     if (existingUser) {
-      return errorResponse(res, 409, "Email already registered");
+      return res
+        .status(409)
+        .json({ success: false, message: "Email already registered" });
     }
 
     const user = await User.create({ firstName, lastName, email, password });
+    const userObj = user.toJSON();
 
-    return successResponse(res, 201, "Registration successful", { user });
+    return res.status(201).json({
+      success: true,
+      message: "Registration successful",
+      data: { user: userObj },
+    });
   } catch (err) {
-    return errorResponse(res, 500, err.message);
+    console.error("[REGISTER ERROR]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -40,37 +55,47 @@ exports.login = async (req, res) => {
   try {
     const { email, password } = req.body;
 
+    if (!email || !password) {
+      return res
+        .status(400)
+        .json({ success: false, message: "Email and password are required" });
+    }
+
     const user = await User.findOne({ email });
     if (!user || !(await user.comparePassword(password))) {
-      // Vague message intentionally — don't reveal which field is wrong
-      return errorResponse(res, 401, "Invalid email or password");
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid email or password" });
     }
 
     if (!user.isActive) {
-      return errorResponse(res, 403, "Account is deactivated");
+      return res
+        .status(403)
+        .json({ success: false, message: "Account is deactivated" });
     }
 
     const payload = { userId: user._id, email: user.email, role: user.role };
-
     const accessToken = generateAccessToken(payload);
     const refreshToken = generateRefreshToken(payload);
 
-    // Save refresh token to DB
     await Token.create({
       userId: user._id,
       token: refreshToken,
       expiresAt: new Date(Date.now() + 7 * 24 * 60 * 60 * 1000),
     });
 
-    // Update last login
-    user.lastLogin = new Date();
-    await user.save();
+    await User.findByIdAndUpdate(user._id, { lastLogin: new Date() });
 
     setRefreshCookie(res, refreshToken);
 
-    return successResponse(res, 200, "Login successful", { accessToken, user });
+    return res.status(200).json({
+      success: true,
+      message: "Login successful",
+      data: { accessToken, user: user.toJSON() },
+    });
   } catch (err) {
-    return errorResponse(res, 500, err.message);
+    console.error("[LOGIN ERROR]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
@@ -78,28 +103,40 @@ exports.login = async (req, res) => {
 exports.refreshToken = async (req, res) => {
   try {
     const token = req.cookies.refreshToken;
-    if (!token) return errorResponse(res, 401, "No refresh token");
+    if (!token) {
+      return res
+        .status(401)
+        .json({ success: false, message: "No refresh token" });
+    }
 
-    // Verify token signature
     const decoded = verifyRefreshToken(token);
-
-    // Check token exists in DB and is not revoked
     const storedToken = await Token.findOne({ token, isRevoked: false });
-    if (!storedToken)
-      return errorResponse(res, 401, "Invalid or revoked token");
+    if (!storedToken) {
+      return res
+        .status(401)
+        .json({ success: false, message: "Invalid or revoked token" });
+    }
 
     const user = await User.findById(decoded.userId);
-    if (!user || !user.isActive)
-      return errorResponse(res, 401, "User not found or inactive");
+    if (!user || !user.isActive) {
+      return res
+        .status(401)
+        .json({ success: false, message: "User not found or inactive" });
+    }
 
     const payload = { userId: user._id, email: user.email, role: user.role };
     const newAccessToken = generateAccessToken(payload);
 
-    return successResponse(res, 200, "Token refreshed", {
-      accessToken: newAccessToken,
+    return res.status(200).json({
+      success: true,
+      message: "Token refreshed",
+      data: { accessToken: newAccessToken },
     });
   } catch (err) {
-    return errorResponse(res, 401, "Invalid refresh token");
+    console.error("[REFRESH ERROR]", err.message);
+    return res
+      .status(401)
+      .json({ success: false, message: "Invalid refresh token" });
   }
 };
 
@@ -108,24 +145,34 @@ exports.logout = async (req, res) => {
   try {
     const token = req.cookies.refreshToken;
     if (token) {
-      // Revoke the token in DB
       await Token.findOneAndUpdate({ token }, { isRevoked: true });
       res.clearCookie("refreshToken");
     }
-    return successResponse(res, 200, "Logged out successfully");
+    return res
+      .status(200)
+      .json({ success: true, message: "Logged out successfully" });
   } catch (err) {
-    return errorResponse(res, 500, err.message);
+    console.error("[LOGOUT ERROR]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };
 
-// ─── GET CURRENT USER ─────────────────────────────────────────
+// ─── GET ME ───────────────────────────────────────────────────
 exports.getMe = async (req, res) => {
   try {
-    // req.user is set by the API Gateway before forwarding the request
     const user = await User.findById(req.user.userId);
-    if (!user) return errorResponse(res, 404, "User not found");
-    return successResponse(res, 200, "User fetched", { user });
+    if (!user) {
+      return res
+        .status(404)
+        .json({ success: false, message: "User not found" });
+    }
+    return res.status(200).json({
+      success: true,
+      message: "User fetched",
+      data: { user: user.toJSON() },
+    });
   } catch (err) {
-    return errorResponse(res, 500, err.message);
+    console.error("[GET ME ERROR]", err.message);
+    return res.status(500).json({ success: false, message: err.message });
   }
 };

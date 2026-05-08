@@ -11,7 +11,6 @@ const {
   transactionLimiter,
 } = require("../middleware/rateLimiter.middleware");
 
-// Apply global rate limiter and logger to all routes
 router.use(globalLimiter);
 router.use(requestLogger);
 
@@ -20,55 +19,72 @@ router.get("/health", (req, res) => {
   res.json({ success: true, message: "API Gateway is running" });
 });
 
-// ─── Proxy factory ────────────────────────────────────────────────────
-const createProxy = (targetUrl) =>
-  createProxyMiddleware({
+// ─── Proxy factory ─────────────────────────────────────────────
+const createProxy = (targetUrl) => {
+  if (!targetUrl) {
+    throw new Error(`[GATEWAY] Missing service URL — check your .env file`);
+  }
+  return createProxyMiddleware({
     target: targetUrl,
     changeOrigin: true,
+    selfHandleResponse: false,
+    proxyTimeout: 30000,
+    timeout: 30000,
     on: {
       error: (err, req, res) => {
         console.error(`[PROXY ERROR] ${err.message}`);
-        res.status(502).json({
-          success: false,
-          message: "Service temporarily unavailable. Please try again later.",
-        });
+        if (!res.headersSent) {
+          res.status(502).json({
+            success: false,
+            message: "Service temporarily unavailable.",
+          });
+        }
+      },
+      proxyReq: (proxyReq, req) => {
+        if (req.body) {
+          const bodyData = JSON.stringify(req.body);
+          proxyReq.setHeader("Content-Type", "application/json");
+          proxyReq.setHeader("Content-Length", Buffer.byteLength(bodyData));
+          proxyReq.write(bodyData);
+        }
       },
     },
   });
+};
 
-// ─── Auth Service (public) ─────────────────────────────────────────────
+// ─── Auth Service (public) ─────────────────────────────────────
 router.use(services.auth.prefix, authLimiter, createProxy(services.auth.url));
 
-// ─── Customer Service ──────────────────────────────────────────────────
+// ─── Customer Service ──────────────────────────────────────────
 router.use(
   services.customer.prefix,
   authMiddleware,
   createProxy(services.customer.url),
 );
 
-// ─── Account Service ───────────────────────────────────────────────────
+// ─── Account Service ───────────────────────────────────────────
 router.use(
   services.account.prefix,
   authMiddleware,
   createProxy(services.account.url),
 );
 
-// ─── Transaction Service ───────────────────────────────────────────────
+// ─── Transaction Service ───────────────────────────────────────
 router.use(
   services.transaction.prefix,
   authMiddleware,
-  transactionLimiter, // Extra rate limiting for transactions
+  transactionLimiter,
   createProxy(services.transaction.url),
 );
 
-// ─── Fraud Detection Service ───────────────────────────────────────────
+// ─── Fraud Service ─────────────────────────────────────────────
 router.use(
   services.fraud.prefix,
   authMiddleware,
   createProxy(services.fraud.url),
 );
 
-// ─── Notification Service ──────────────────────────────────────────────
+// ─── Notification Service ──────────────────────────────────────
 router.use(
   services.notification.prefix,
   authMiddleware,
