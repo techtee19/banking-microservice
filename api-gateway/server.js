@@ -8,29 +8,25 @@ const routes = require("./src/routes/index");
 
 const app = express();
 
-// Security & Middleware
 app.use(helmet());
 app.use(morgan("dev"));
-// app.use(express.json());
+app.use(express.json());
+app.use(express.urlencoded({ extended: true }));
 
-// CORS — only allow specified origins
 app.use(
   cors({
     origin: process.env.ALLOWED_ORIGINS?.split(",") || "*",
-    credentials: true, // Allow cookies (refresh token)
+    credentials: true,
     methods: ["GET", "POST", "PUT", "DELETE", "PATCH"],
   }),
 );
 
-// All routes
 app.use("/", routes);
 
-// 404 handler
 app.use((req, res) => {
   res.status(404).json({ success: false, message: "Route not found" });
 });
 
-// Global error handler
 app.use((err, req, res, next) => {
   console.error(err.stack);
   res.status(err.status || 500).json({

@@ -3,6 +3,8 @@ const { errorResponse } = require("../utils/response.utils");
 
 const schemas = {
   createCustomer: Joi.object({
+    firstName: Joi.string().min(2).max(50).required(),
+    lastName: Joi.string().min(2).max(50).required(),
     phone: Joi.string().min(7).max(20),
     dateOfBirth: Joi.date().max("now"),
     address: Joi.object({
