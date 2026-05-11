@@ -18,6 +18,8 @@ router.post(
   transactionController.withdrawal,
 );
 router.get("/my", transactionController.getMyTransactions);
+
+// ─── Must come AFTER /my ───────────────────────────────────────
 router.get("/:transactionRef", transactionController.getTransactionByRef);
 
 // ─── Admin routes ──────────────────────────────────────────────

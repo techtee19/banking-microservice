@@ -13,6 +13,7 @@ const authMiddleware = (req, res, next) => {
 
     // Verify token
     const decoded = jwt.verify(token, process.env.JWT_ACCESS_SECRET);
+    console.log("[GATEWAY AUTH] decoded:", decoded); // ← add this
 
     // Attach user info to request headers so downstream services can use it
     // without verifying the JWT themselves

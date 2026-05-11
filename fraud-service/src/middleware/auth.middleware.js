@@ -1,4 +1,3 @@
-// Validate internal service-to-service requests
 const internalAuth = (req, res, next) => {
   const apiKey = req.headers["x-internal-api-key"];
   if (apiKey !== process.env.INTERNAL_API_KEY) {
@@ -10,7 +9,6 @@ const internalAuth = (req, res, next) => {
   next();
 };
 
-// For admin-facing routes via API Gateway
 const authMiddleware = (req, res, next) => {
   const userId = req.headers["x-user-id"];
   const role = req.headers["x-user-role"];

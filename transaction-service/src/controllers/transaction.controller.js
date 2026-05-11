@@ -38,7 +38,7 @@ exports.transfer = async (req, res) => {
 
   try {
     // Step 1 — Verify source account exists and belongs to user
-    const source = await getAccount(sourceAccount);
+    const source = await getAccount(sourceAccount, userId);
     if (!source || source.userId !== userId) {
       throw { status: 403, message: "Source account not found or not yours" };
     }
@@ -131,7 +131,8 @@ exports.deposit = async (req, res) => {
   });
 
   try {
-    const destination = await getAccount(destinationAccount);
+    // Pass userId so account service can verify ownership
+    const destination = await getAccount(destinationAccount, userId);
     if (!destination || destination.userId !== userId) {
       throw { status: 403, message: "Account not found or not yours" };
     }
@@ -162,7 +163,6 @@ exports.deposit = async (req, res) => {
     transaction.status = "failed";
     transaction.metadata.failureReason = err.message;
     await transaction.save();
-
     return errorResponse(res, err.status || 500, err.message);
   }
 };
@@ -185,7 +185,7 @@ exports.withdrawal = async (req, res) => {
   });
 
   try {
-    const source = await getAccount(sourceAccount);
+    const source = await getAccount(sourceAccount, userId);
     if (!source || source.userId !== userId) {
       throw { status: 403, message: "Account not found or not yours" };
     }
@@ -286,23 +286,27 @@ exports.getMyTransactions = async (req, res) => {
 // ─── GET TRANSACTION BY REF ────────────────────────────────────
 exports.getTransactionByRef = async (req, res) => {
   try {
+    console.log("[GET TX] ref:", req.params.transactionRef);
+    console.log("[GET TX] userId:", req.user.userId);
+
     const transaction = await Transaction.findOne({
       transactionRef: req.params.transactionRef,
     });
 
+    console.log("[GET TX] found:", transaction);
+
     if (!transaction) return errorResponse(res, 404, "Transaction not found");
 
-    // Customers can only view their own transactions
     if (req.user.role !== "admin" && transaction.userId !== req.user.userId) {
       return errorResponse(res, 403, "Forbidden — not your transaction");
     }
 
     return successResponse(res, 200, "Transaction fetched", { transaction });
   } catch (err) {
+    console.error("[GET TX ERROR]", err.message);
     return errorResponse(res, 500, err.message);
   }
 };
-
 // ─── ADMIN: GET ALL TRANSACTIONS ───────────────────────────────
 exports.getAllTransactions = async (req, res) => {
   try {

@@ -3,7 +3,7 @@ const services = {
   auth: {
     url: process.env.AUTH_SERVICE_URL,
     prefix: "/api/auth",
-    requiresAuth: false, // Public — login/register don't need a token
+    requiresAuth: false,
   },
   customer: {
     url: process.env.CUSTOMER_SERVICE_URL,

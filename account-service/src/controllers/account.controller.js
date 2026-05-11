@@ -60,8 +60,15 @@ exports.getAccountByNumber = async (req, res) => {
 
     if (!account) return errorResponse(res, 404, "Account not found");
 
-    // Customers can only view their own accounts
-    if (req.user.role !== "admin" && account.userId !== req.user.userId) {
+    // Skip ownership check for internal service calls
+    const isInternalCall =
+      req.headers["x-internal-api-key"] === process.env.INTERNAL_API_KEY;
+
+    if (
+      !isInternalCall &&
+      req.user.role !== "admin" &&
+      account.userId !== req.user.userId
+    ) {
       return errorResponse(res, 403, "Forbidden — not your account");
     }
 

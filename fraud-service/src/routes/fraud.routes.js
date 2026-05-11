@@ -17,17 +17,36 @@ router.post(
 );
 
 // ─── Admin routes (via API Gateway) ───────────────────────────
-router.use(authMiddleware);
-router.use(requireRole("admin"));
-
-router.get("/logs", fraudController.getFraudLogs);
-router.get("/logs/:transactionRef", fraudController.getFraudLogByRef);
-router.get("/blacklist", fraudController.getBlacklist);
+router.get(
+  "/logs",
+  authMiddleware,
+  requireRole("admin"),
+  fraudController.getFraudLogs,
+);
+router.get(
+  "/logs/:transactionRef",
+  authMiddleware,
+  requireRole("admin"),
+  fraudController.getFraudLogByRef,
+);
+router.get(
+  "/blacklist",
+  authMiddleware,
+  requireRole("admin"),
+  fraudController.getBlacklist,
+);
 router.post(
   "/blacklist",
+  authMiddleware,
+  requireRole("admin"),
   validate("addBlacklist"),
   fraudController.addToBlacklist,
 );
-router.delete("/blacklist/:id", fraudController.removeFromBlacklist);
+router.delete(
+  "/blacklist/:id",
+  authMiddleware,
+  requireRole("admin"),
+  fraudController.removeFromBlacklist,
+);
 
 module.exports = router;

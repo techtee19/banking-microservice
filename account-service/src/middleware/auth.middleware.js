@@ -1,4 +1,16 @@
 const authMiddleware = (req, res, next) => {
+  // Allow internal service calls with API key
+  const internalApiKey = req.headers["x-internal-api-key"];
+  if (internalApiKey && internalApiKey === process.env.INTERNAL_API_KEY) {
+    req.user = {
+      userId: req.headers["x-user-id"] || "internal",
+      email: req.headers["x-user-email"] || "",
+      role: req.headers["x-user-role"] || "admin",
+    };
+    return next();
+  }
+
+  // Regular gateway requests
   const userId = req.headers["x-user-id"];
   const email = req.headers["x-user-email"];
   const role = req.headers["x-user-role"];

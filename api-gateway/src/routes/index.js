@@ -14,6 +14,12 @@ const {
 router.use(globalLimiter);
 router.use(requestLogger);
 
+// Add this right after router.use(requestLogger)
+router.use((req, res, next) => {
+  console.log(`[GATEWAY ROUTE] ${req.method} ${req.originalUrl}`);
+  next();
+});
+
 // Health check
 router.get("/health", (req, res) => {
   res.json({ success: true, message: "API Gateway is running" });
