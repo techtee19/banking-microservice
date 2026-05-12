@@ -1,0 +1,152 @@
+version: "3.9"
+
+services:
+  # ─── MongoDB ────────────────────────────────────────────────
+  mongodb:
+    image: mongo:7
+    container_name: banking_mongodb
+    restart: always
+    ports:
+      - "27017:27017"
+    volumes:
+      - mongodb_data:/data/db
+    networks:
+      - banking_network
+
+  # ─── API Gateway ────────────────────────────────────────────
+  api-gateway:
+    build: ./api-gateway
+    container_name: banking_api_gateway
+    restart: always
+    ports:
+      - "3000:3000"
+    env_file:
+      - ./api-gateway/.env
+    environment:
+      - AUTH_SERVICE_URL=http://auth-service:3001
+      - CUSTOMER_SERVICE_URL=http://customer-service:3002
+      - ACCOUNT_SERVICE_URL=http://account-service:3003
+      - TRANSACTION_SERVICE_URL=http://transaction-service:3004
+      - FRAUD_SERVICE_URL=http://fraud-service:3005
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+    depends_on:
+      - auth-service
+      - customer-service
+      - account-service
+      - transaction-service
+      - fraud-service
+      - notification-service
+    networks:
+      - banking_network
+
+  # ─── Auth Service ────────────────────────────────────────────
+  auth-service:
+    build: ./auth-service
+    container_name: banking_auth_service
+    restart: always
+    ports:
+      - "3001:3001"
+    env_file:
+      - ./auth-service/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/auth_service
+    depends_on:
+      - mongodb
+    networks:
+      - banking_network
+
+  # ─── Customer Service ────────────────────────────────────────
+  customer-service:
+    build: ./customer-service
+    container_name: banking_customer_service
+    restart: always
+    ports:
+      - "3002:3002"
+    env_file:
+      - ./customer-service/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/customer_service
+    depends_on:
+      - mongodb
+    networks:
+      - banking_network
+
+  # ─── Account Service ─────────────────────────────────────────
+  account-service:
+    build: ./account-service
+    container_name: banking_account_service
+    restart: always
+    ports:
+      - "3003:3003"
+    env_file:
+      - ./account-service/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/account_service
+    depends_on:
+      - mongodb
+    networks:
+      - banking_network
+
+  # ─── Transaction Service ─────────────────────────────────────
+  transaction-service:
+    build: ./transaction-service
+    container_name: banking_transaction_service
+    restart: always
+    ports:
+      - "3004:3004"
+    env_file:
+      - ./transaction-service/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/transaction_service
+      - ACCOUNT_SERVICE_URL=http://account-service:3003
+      - FRAUD_SERVICE_URL=http://fraud-service:3005
+      - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+    depends_on:
+      - mongodb
+      - account-service
+      - fraud-service
+      - notification-service
+    networks:
+      - banking_network
+
+  # ─── Fraud Service ───────────────────────────────────────────
+  fraud-service:
+    build: ./fraud-service
+    container_name: banking_fraud_service
+    restart: always
+    ports:
+      - "3005:3005"
+    env_file:
+      - ./fraud-service/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/fraud_service
+    depends_on:
+      - mongodb
+    networks:
+      - banking_network
+
+  # ─── Notification Service ────────────────────────────────────
+  notification-service:
+    build: ./notification-service
+    container_name: banking_notification_service
+    restart: always
+    ports:
+      - "3006:3006"
+    env_file:
+      - ./notification-service/.env
+    environment:
+      - MONGO_URI=mongodb://mongodb:27017/notification_service
+    depends_on:
+      - mongodb
+    networks:
+      - banking_network
+
+# ─── Volumes ─────────────────────────────────────────────────
+volumes:
+  mongodb_data:
+    driver: local
+
+# ─── Networks ────────────────────────────────────────────────
+networks:
+  banking_network:
+    driver: bridge
