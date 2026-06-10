@@ -1,17 +1,24 @@
 const nodemailer = require("nodemailer");
 
-// Create reusable transporter
-const transporter = nodemailer.createTransport({
-  host: process.env.SMTP_HOST,
-  port: Number(process.env.SMTP_PORT),
-  secure: false, // true for port 465
-  auth: {
-    user: process.env.SMTP_USER,
-    pass: process.env.SMTP_PASS,
-  },
-});
-
 const sendEmail = async ({ to, subject, html }) => {
+  // Create transporter here so env vars are already loaded
+  const transporter = nodemailer.createTransport({
+    host: process.env.SMTP_HOST,
+    port: Number(process.env.SMTP_PORT),
+    secure: false,
+    auth: {
+      user: process.env.SMTP_USER,
+      pass: process.env.SMTP_PASS,
+    },
+  });
+
+  console.log("[EMAIL CONFIG]", {
+    host: process.env.SMTP_HOST,
+    port: process.env.SMTP_PORT,
+    user: process.env.SMTP_USER,
+    pass: process.env.SMTP_PASS ? "SET" : "NOT SET",
+  });
+
   const info = await transporter.sendMail({
     from: process.env.EMAIL_FROM,
     to,

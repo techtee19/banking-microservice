@@ -1,10 +1,10 @@
+require("dotenv").config();
+
 const express = require("express");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const connectDB = require("./src/config/db");
 const notificationRoutes = require("./src/routes/notification.routes");
-
-require("dotenv").config();
 
 const app = express();
 
