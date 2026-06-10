@@ -1,4 +1,3 @@
-# Use official Node.js image
 FROM node:22-alpine
 
 # Install pnpm
@@ -7,17 +6,21 @@ RUN npm install -g pnpm
 # Set working directory
 WORKDIR /app
 
-# Copy package files first (for caching)
-COPY package.json pnpm-lock.yaml ./
+# Copy package files
+COPY package.json ./
+
+# Copy pnpm-lock if it exists
+COPY pnpm-lock.yaml* ./
 
 # Install dependencies
-RUN pnpm install --frozen-lockfile
+RUN pnpm install
 
-# Copy rest of the source code
+# Copy source code
 COPY . .
 
-# Expose the service port
-EXPOSE 3000
+# Remove .env from container (use docker-compose environment instead)
+RUN rm -f .env
 
-# Start the service
+EXPOSE 3002
+
 CMD ["node", "server.js"]
