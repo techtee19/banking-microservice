@@ -30,20 +30,20 @@ router.get(
   fraudController.getFraudLogByRef,
 );
 router.get(
-  "/blacklist",
+  "/blackList",
   authMiddleware,
   requireRole("admin"),
   fraudController.getBlacklist,
 );
 router.post(
-  "/blacklist",
+  "/blackList",
   authMiddleware,
   requireRole("admin"),
   validate("addBlacklist"),
   fraudController.addToBlacklist,
 );
 router.delete(
-  "/blacklist/:id",
+  "/blackList/:id",
   authMiddleware,
   requireRole("admin"),
   fraudController.removeFromBlacklist,

@@ -1,5 +1,5 @@
 const FraudLog = require("../models/fraudLog.model");
-const Blacklist = require("../models/blacklist.model");
+const Blacklist = require("../models/blackList.model");
 const { evaluateTransaction } = require("../rules/fraudRules");
 const { successResponse, errorResponse } = require("../utils/response.utils");
 

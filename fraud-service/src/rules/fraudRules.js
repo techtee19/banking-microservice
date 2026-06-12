@@ -1,5 +1,5 @@
 const FraudLog = require("../models/fraudLog.model");
-const Blacklist = require("../models/blacklist.model");
+const Blacklist = require("../models/blackList.model");
 
 // Each rule returns { score, reason } if triggered, or null if clean
 const rules = [
