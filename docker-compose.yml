@@ -29,6 +29,7 @@ services:
       - TRANSACTION_SERVICE_URL=http://transaction-service:3004
       - FRAUD_SERVICE_URL=http://fraud-service:3005
       - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+      - PAYMENT_SERVICE_URL=http://payment-service:3007
     depends_on:
       - auth-service
       - customer-service
@@ -140,6 +141,27 @@ services:
       - mongodb
     networks:
       - banking_network
+
+payment-service:
+  build: ./payment-service
+  container_name: banking_payment_service
+  restart: always
+  ports:
+    - "3007:3007"
+  env_file:
+    - ./payment-service/.env
+  environment:
+    - MONGO_URI=mongodb://mongodb:27017/payment_service
+    - ACCOUNT_SERVICE_URL=http://account-service:3003
+    - FRAUD_SERVICE_URL=http://fraud-service:3005
+    - NOTIFICATION_SERVICE_URL=http://notification-service:3006
+  depends_on:
+    - mongodb
+    - account-service
+    - fraud-service
+    - notification-service
+  networks:
+    - banking_network
 
 # ─── Volumes ─────────────────────────────────────────────────
 volumes:

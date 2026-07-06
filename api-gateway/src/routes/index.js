@@ -94,6 +94,11 @@ router.use(
   },
 );
 
+// ── Payment Service ─────────────────────────────────────────────
+router.use(services.payment.prefix, authMiddleware, (req, res) => {
+  createProxy(services.payment.url)(req, res);
+});
+
 // ─── Fraud Service ─────────────────────────────────────────────
 router.use(services.fraud.prefix, authMiddleware, (req, res) => {
   createProxy(services.fraud.url)(req, res);

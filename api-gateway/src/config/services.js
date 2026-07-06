@@ -20,6 +20,11 @@ const services = {
     prefix: "/api/transactions",
     requiresAuth: true,
   },
+  payment: {
+    url: process.env.PAYMENT_SERVICE_URL,
+    prefix: "/api/payments",
+    requiresAuth: true,
+  },
   fraud: {
     url: process.env.FRAUD_SERVICE_URL,
     prefix: "/api/fraud",
