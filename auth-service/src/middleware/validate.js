@@ -23,7 +23,7 @@ const schemas = {
 
 const validate = (schemaName) => {
   return (req, res, next) => {
-    console.log("[VALIDATE] body:", req.body); // ← add this temporarily
+    // console.log("[VALIDATE] body:", req.body); // ← add this temporarily
     const schema = schemas[schemaName];
     if (!schema) return next();
 
