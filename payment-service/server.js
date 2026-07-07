@@ -5,6 +5,10 @@ const helmet = require("helmet");
 const morgan = require("morgan");
 const connectDB = require("./src/config/db");
 const paymentRoutes = require("./src/routes/payment.routes");
+const {
+  registerWithRegistry,
+  startHeartbeat,
+} = require("./src/utils/registry.client");
 
 const app = express();
 
@@ -33,7 +37,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3007;
 
 connectDB().then(() => {
-  app.listen(PORT, () =>
-    console.log(`Payment Service running on port ${PORT}`),
-  );
+  app.listen(PORT, () => {
+    console.log(`Payment Service running on port ${PORT}`);
+    registerWithRegistry();
+    startHeartbeat();
+  });
 });

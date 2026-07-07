@@ -5,6 +5,7 @@ const router = express.Router();
 const services = require("../config/services");
 const authMiddleware = require("../middleware/auth.middleware");
 const requestLogger = require("../middleware/logger.middleware");
+const { resolveServiceUrl } = require("../utils/serviceResolver");
 const {
   globalLimiter,
   authLimiter,
@@ -14,21 +15,16 @@ const {
 router.use(globalLimiter);
 router.use(requestLogger);
 
-// Add this right after router.use(requestLogger)
-router.use((req, res, next) => {
-  console.log(`[GATEWAY ROUTE] ${req.method} ${req.originalUrl}`);
-  next();
-});
-
 // Health check
 router.get("/health", (req, res) => {
   res.json({ success: true, message: "API Gateway is running" });
 });
 
-// ─── Manual proxy factory using axios ─────────────────────────
-const createProxy = (targetUrl) => {
+// ─── Proxy factory ─────────────────────────────────────────────
+const createProxy = (serviceName, fallbackUrl) => {
   return async (req, res) => {
     try {
+      const targetUrl = await resolveServiceUrl(serviceName, fallbackUrl);
       const url = `${targetUrl}${req.originalUrl}`;
       console.log(`[PROXY] ${req.method} ${req.originalUrl} → ${url}`);
 
@@ -48,7 +44,6 @@ const createProxy = (targetUrl) => {
         withCredentials: true,
       });
 
-      // Forward cookies from downstream service back to client
       const setCookie = response.headers["set-cookie"];
       if (setCookie) {
         res.setHeader("Set-Cookie", setCookie);
@@ -57,7 +52,6 @@ const createProxy = (targetUrl) => {
       return res.status(response.status).json(response.data);
     } catch (err) {
       if (err.response) {
-        // Service returned an error response — forward it
         return res.status(err.response.status).json(err.response.data);
       }
       console.error(`[PROXY ERROR] ${err.message}`);
@@ -71,17 +65,17 @@ const createProxy = (targetUrl) => {
 
 // ─── Auth Service (public) ─────────────────────────────────────
 router.use(services.auth.prefix, authLimiter, (req, res) => {
-  createProxy(services.auth.url)(req, res);
+  createProxy("auth-service", services.auth.url)(req, res);
 });
 
 // ─── Customer Service ──────────────────────────────────────────
 router.use(services.customer.prefix, authMiddleware, (req, res) => {
-  createProxy(services.customer.url)(req, res);
+  createProxy("customer-service", services.customer.url)(req, res);
 });
 
 // ─── Account Service ───────────────────────────────────────────
 router.use(services.account.prefix, authMiddleware, (req, res) => {
-  createProxy(services.account.url)(req, res);
+  createProxy("account-service", services.account.url)(req, res);
 });
 
 // ─── Transaction Service ───────────────────────────────────────
@@ -90,23 +84,23 @@ router.use(
   authMiddleware,
   transactionLimiter,
   (req, res) => {
-    createProxy(services.transaction.url)(req, res);
+    createProxy("transaction-service", services.transaction.url)(req, res);
   },
 );
 
-// ── Payment Service ─────────────────────────────────────────────
+// ─── Payment Service ────────────────────────────────────────────
 router.use(services.payment.prefix, authMiddleware, (req, res) => {
-  createProxy(services.payment.url)(req, res);
+  createProxy("payment-service", services.payment.url)(req, res);
 });
 
 // ─── Fraud Service ─────────────────────────────────────────────
 router.use(services.fraud.prefix, authMiddleware, (req, res) => {
-  createProxy(services.fraud.url)(req, res);
+  createProxy("fraud-service", services.fraud.url)(req, res);
 });
 
 // ─── Notification Service ──────────────────────────────────────
 router.use(services.notification.prefix, authMiddleware, (req, res) => {
-  createProxy(services.notification.url)(req, res);
+  createProxy("notification-service", services.notification.url)(req, res);
 });
 
 module.exports = router;

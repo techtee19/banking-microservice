@@ -1,10 +1,14 @@
+require("dotenv").config();
+
 const express = require("express");
 const helmet = require("helmet");
 const morgan = require("morgan");
 const connectDB = require("./src/config/db");
 const transactionRoutes = require("./src/routes/transaction.routes");
-
-require("dotenv").config();
+const {
+  registerWithRegistry,
+  startHeartbeat,
+} = require("./src/utils/registry.client");
 
 const app = express();
 
@@ -31,7 +35,9 @@ app.use((err, req, res, next) => {
 const PORT = process.env.PORT || 3004;
 
 connectDB().then(() => {
-  app.listen(PORT, () =>
-    console.log(`Transaction Service running on port ${PORT}`),
-  );
+  app.listen(PORT, () => {
+    console.log(`Transaction Service running on port ${PORT}`);
+    registerWithRegistry();
+    startHeartbeat();
+  });
 });

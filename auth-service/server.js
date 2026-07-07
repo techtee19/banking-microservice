@@ -6,6 +6,10 @@ const morgan = require("morgan");
 const cookieParser = require("cookie-parser");
 const connectDB = require("./src/config/db");
 const authRoutes = require("./src/routes/auth.routes");
+const {
+  registerWithRegistry,
+  startHeartbeat,
+} = require("./src/utils/registry.client");
 
 const app = express();
 
@@ -30,7 +34,11 @@ const PORT = process.env.PORT || 3001;
 
 connectDB()
   .then(() => {
-    app.listen(PORT, () => console.log(`Auth Service running on port ${PORT}`));
+    app.listen(PORT, () => {
+      console.log(`Auth Service running on port ${PORT}`);
+      registerWithRegistry();
+      startHeartbeat();
+    });
   })
   .catch((err) => {
     console.error("Failed to start auth service:", err.message);
