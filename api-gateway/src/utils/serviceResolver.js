@@ -4,7 +4,7 @@ const REGISTRY_URL = process.env.REGISTRY_SERVICE_URL;
 
 // Cache resolved URLs briefly to avoid hitting the registry on every request
 const cache = new Map();
-const CACHE_TTL_MS = 5000;
+const CACHE_TTL_MS = 20000;
 
 const resolveServiceUrl = async (serviceName, fallbackUrl) => {
   const cached = cache.get(serviceName);
