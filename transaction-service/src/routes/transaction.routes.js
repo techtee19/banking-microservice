@@ -6,20 +6,31 @@ const {
   requireRole,
 } = require("../middleware/auth.middleware");
 const validate = require("../middleware/validate.middleware");
+const idempotency = require("../middleware/idempotency.middleware");
 
 router.use(authMiddleware);
 
-// ─── Customer routes ───────────────────────────────────────────
-router.post("/transfer", validate("transfer"), transactionController.transfer);
-router.post("/deposit", validate("deposit"), transactionController.deposit);
+// ─── Customer routes — idempotency required on all money-moving actions ─
+router.post(
+  "/transfer",
+  idempotency(),
+  validate("transfer"),
+  transactionController.transfer,
+);
+router.post(
+  "/deposit",
+  idempotency(),
+  validate("deposit"),
+  transactionController.deposit,
+);
 router.post(
   "/withdrawal",
+  idempotency(),
   validate("withdrawal"),
   transactionController.withdrawal,
 );
-router.get("/my", transactionController.getMyTransactions);
 
-// ─── Must come AFTER /my ───────────────────────────────────────
+router.get("/my", transactionController.getMyTransactions);
 router.get("/:transactionRef", transactionController.getTransactionByRef);
 
 // ─── Admin routes ──────────────────────────────────────────────

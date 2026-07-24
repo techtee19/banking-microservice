@@ -1,10 +1,10 @@
 const axios = require("axios");
 
-console.log("[REGISTRY DEBUG]", {
-  REGISTRY_URL: process.env.REGISTRY_SERVICE_URL,
-  SERVICE_NAME: process.env.SERVICE_NAME,
-  SERVICE_URL: process.env.SERVICE_SELF_URL,
-});
+// console.log("[REGISTRY DEBUG]", {
+//   REGISTRY_URL: process.env.REGISTRY_SERVICE_URL,
+//   SERVICE_NAME: process.env.SERVICE_NAME,
+//   SERVICE_URL: process.env.SERVICE_SELF_URL,
+// });
 
 const REGISTRY_URL = process.env.REGISTRY_SERVICE_URL;
 const SERVICE_NAME = process.env.SERVICE_NAME;

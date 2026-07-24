@@ -1,8 +1,5 @@
 const Account = require("../models/account.model");
-const {
-  generateAccountNumber,
-  checkDailyLimit,
-} = require("../utils/account.utils");
+const { generateAccountNumber } = require("../utils/account.utils");
 const { successResponse, errorResponse } = require("../utils/response.utils");
 
 // ─── CREATE ACCOUNT ────────────────────────────────────────────
@@ -11,12 +8,10 @@ exports.createAccount = async (req, res) => {
     const { userId } = req.user;
     const { accountType, currency, dailyLimit, isPrimary } = req.body;
 
-    // If this is set as primary, unset all other primary accounts
     if (isPrimary) {
       await Account.updateMany({ userId }, { $set: { isPrimary: false } });
     }
 
-    // If it's the user's first account, make it primary automatically
     const accountCount = await Account.countDocuments({ userId });
     const shouldBePrimary = isPrimary || accountCount === 0;
 
@@ -43,7 +38,7 @@ exports.getMyAccounts = async (req, res) => {
     const accounts = await Account.find({
       userId: req.user.userId,
       status: { $ne: "closed" },
-    }).sort({ isPrimary: -1, createdAt: -1 }); // Primary account first
+    }).sort({ isPrimary: -1, createdAt: -1 });
 
     return successResponse(res, 200, "Accounts fetched", { accounts });
   } catch (err) {
@@ -60,7 +55,6 @@ exports.getAccountByNumber = async (req, res) => {
 
     if (!account) return errorResponse(res, 404, "Account not found");
 
-    // Skip ownership check for internal service calls
     const isInternalCall =
       req.headers["x-internal-api-key"] === process.env.INTERNAL_API_KEY;
 
@@ -87,12 +81,10 @@ exports.updateAccount = async (req, res) => {
     const account = await Account.findOne({ accountNumber });
     if (!account) return errorResponse(res, 404, "Account not found");
 
-    // Customers can only update their own accounts
     if (req.user.role !== "admin" && account.userId !== req.user.userId) {
       return errorResponse(res, 403, "Forbidden — not your account");
     }
 
-    // If setting as primary, unset others
     if (isPrimary) {
       await Account.updateMany(
         { userId: account.userId },
@@ -112,41 +104,79 @@ exports.updateAccount = async (req, res) => {
   }
 };
 
-// ─── UPDATE BALANCE (internal — called by Transaction Service) ─
+// ─── UPDATE BALANCE (internal — called by Transaction/Payment Service) ─
 exports.updateBalance = async (req, res) => {
   try {
     const { accountNumber } = req.params;
     const { amount, operation } = req.body;
 
-    const account = await Account.findOne({ accountNumber, status: "active" });
-    if (!account)
-      return errorResponse(res, 404, "Account not found or inactive");
-
     if (operation === "debit") {
-      // Check sufficient balance
-      if (account.balance < amount) {
-        return errorResponse(res, 400, "Insufficient balance");
+      const account = await Account.findOne({
+        accountNumber,
+        status: "active",
+      });
+      if (!account)
+        return errorResponse(res, 404, "Account not found or inactive");
+
+      const now = new Date();
+      const lastReset = new Date(account.lastLimitReset);
+      const isNewDay =
+        now.getDate() !== lastReset.getDate() ||
+        now.getMonth() !== lastReset.getMonth() ||
+        now.getFullYear() !== lastReset.getFullYear();
+
+      if (isNewDay) {
+        await Account.updateOne(
+          { accountNumber },
+          { $set: { dailySpent: 0, lastLimitReset: now } },
+        );
       }
 
-      // Check daily limit
-      if (checkDailyLimit(account, amount)) {
+      const updated = await Account.findOneAndUpdate(
+        {
+          accountNumber,
+          status: "active",
+          balance: { $gte: amount },
+          $expr: { $lte: [{ $add: ["$dailySpent", amount] }, "$dailyLimit"] },
+        },
+        {
+          $inc: { balance: -amount, dailySpent: amount },
+        },
+        { new: true },
+      );
+
+      if (!updated) {
+        const current = await Account.findOne({ accountNumber });
+        if (!current) return errorResponse(res, 404, "Account not found");
+        if (current.balance < amount) {
+          return errorResponse(res, 400, "Insufficient balance");
+        }
         return errorResponse(res, 400, "Daily transaction limit exceeded");
       }
 
-      account.balance -= amount;
-      account.dailySpent += amount;
+      return successResponse(res, 200, "Balance updated", {
+        accountNumber: updated.accountNumber,
+        balance: updated.balance,
+        operation,
+        amount,
+      });
     } else {
-      account.balance += amount; // Credit
+      const updated = await Account.findOneAndUpdate(
+        { accountNumber, status: "active" },
+        { $inc: { balance: amount } },
+        { new: true },
+      );
+
+      if (!updated)
+        return errorResponse(res, 404, "Account not found or inactive");
+
+      return successResponse(res, 200, "Balance updated", {
+        accountNumber: updated.accountNumber,
+        balance: updated.balance,
+        operation,
+        amount,
+      });
     }
-
-    await account.save();
-
-    return successResponse(res, 200, "Balance updated", {
-      accountNumber: account.accountNumber,
-      balance: account.balance,
-      operation,
-      amount,
-    });
   } catch (err) {
     return errorResponse(res, 500, err.message);
   }

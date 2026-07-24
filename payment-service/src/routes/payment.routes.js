@@ -6,10 +6,16 @@ const {
   requireRole,
 } = require("../middleware/auth.middleware");
 const validate = require("../middleware/validate.middleware");
+const idempotency = require("../middleware/idempotency.middleware");
 
 router.use(authMiddleware);
 
-router.post("/", validate("createPayment"), paymentController.initiatePayment);
+router.post(
+  "/",
+  idempotency(),
+  validate("createPayment"),
+  paymentController.initiatePayment,
+);
 router.get("/my", paymentController.getMyPayments);
 router.get("/:paymentRef", paymentController.getPaymentByRef);
 
