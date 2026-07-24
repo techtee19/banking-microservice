@@ -39,6 +39,7 @@ const createProxy = (serviceName, fallbackUrl) => {
           "x-user-role": req.headers["x-user-role"] || "",
           "x-internal-api-key": process.env.INTERNAL_API_KEY || "",
           cookie: req.headers["cookie"] || "",
+          "idempotency-key": req.headers["idempotency-key"] || "",
         },
         timeout: 30000,
         withCredentials: true,
